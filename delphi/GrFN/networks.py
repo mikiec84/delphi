@@ -31,6 +31,7 @@ FONT = choose_font()
 
 dodgerblue3 = "#1874CD"
 forestgreen = "#228b22"
+orange1 = "orange1"
 
 
 class ComputationalGraph(nx.DiGraph):
@@ -611,19 +612,20 @@ class GroundedFunctionNetwork(ComputationalGraph):
                 f"Expected GroundedFunctionNetwork, but got {type(other)}"
             )
 
-        def shortname(var):
-            return var[var.find("::") + 2 : var.rfind("_")]
+        def shortname(data):
+            return data["cag_label"]
+            # return var[var.find("::") + 2 : var.rfind("_")]
 
-        def shortname_vars(graph, shortname):
-            return [v for v in graph.nodes() if shortname in v]
+        def shortname_vars(shortname):
+            return [v for v in self.nodes() if shortname in v]
 
         this_var_nodes = [
-            shortname(n)
+            shortname(d)
             for (n, d) in self.nodes(data=True)
             if d["type"] == "variable"
         ]
         other_var_nodes = [
-            shortname(n)
+            shortname(d)
             for (n, d) in other.nodes(data=True)
             if d["type"] == "variable"
         ]
@@ -632,7 +634,7 @@ class GroundedFunctionNetwork(ComputationalGraph):
         full_shared_vars = {
             full_var
             for shared_var in shared_vars
-            for full_var in shortname_vars(self, shared_var)
+            for full_var in shortname_vars(shared_var)
         }
 
         return ForwardInfluenceBlanket(self, full_shared_vars)
@@ -716,12 +718,12 @@ class ForwardInfluenceBlanket(ComputationalGraph):
 
     def __init__(self, G: GroundedFunctionNetwork, shared_nodes: Set[str]):
         super().__init__()
-        self.output_node=G.output_node
+        self.output_node = G.outputs[0]
         self.inputs = set(G.inputs).intersection(shared_nodes)
 
         # Get all paths from shared inputs to shared outputs
         path_inputs = shared_nodes - {self.output_node}
-        io_pairs = [(inp, G.output_node) for inp in path_inputs]
+        io_pairs = [(inp, G.outputs[0]) for inp in path_inputs]
         paths = [
             p for (i, o) in io_pairs for p in all_simple_paths(G, i, o)
         ]
@@ -766,6 +768,7 @@ class ForwardInfluenceBlanket(ComputationalGraph):
         main_nodes = main_nodes - self.inputs - {self.output_node}
 
         orig_nodes = G.nodes(data=True)
+        deleted_nodes = orig_nodes - set(list(main_nodes) + self.inputs + [self.output_node])
 
         self.add_nodes_from([(n, d) for n, d in orig_nodes if n in self.inputs])
         for node in self.inputs:
@@ -914,9 +917,51 @@ class ForwardInfluenceBlanket(ComputationalGraph):
 
         return X, Y, Z, x_var, y_var
 
+    def to_CAG(self):
+        """ Export to a Causal Analysis Graph (CAG) PyGraphviz AGraph object.
+        The CAG shows the influence relationships between the variables and
+        elides the function nodes."""
+
+        G = nx.DiGraph()
+        for (name, attrs) in self.nodes(data=True):
+            if attrs["type"] == "variable":
+                cag_name = attrs["cag_label"]
+                G.add_node(cag_name, **attrs)
+                for pred_fn in self.predecessors(name):
+                    for pred_var in self.predecessors(pred_fn):
+                        v_attrs = self.nodes[pred_var]
+                        v_name = v_attrs["cag_label"]
+                        G.add_node(v_name, **self.nodes[pred_var])
+                        G.add_edge(v_name, cag_name)
+
+        return G
+
     def to_agraph(self):
         A = nx.nx_agraph.to_agraph(self)
-        A.graph_attr.update({"dpi": 227, "fontsize": 20})
+        A.graph_attr.update({"dpi": 227, "fontsize": 20, "rankdir": "LR"})
         A.node_attr.update({"shape": "rectangle", "style": "rounded"})
         A.edge_attr.update({"arrowsize": 0.5})
+        return A
+
+    def to_CAG_agraph(self):
+        """Returns a variable-only view of the GrFN in the form of an AGraph.
+
+        Returns:
+            type: A CAG constructed via variable influence in the GrFN object.
+
+        """
+        CAG = self.to_CAG()
+        for name, data in CAG.nodes(data=True):
+            CAG.nodes[name]["label"] = data["cag_label"]
+        A = nx.nx_agraph.to_agraph(CAG)
+        A.graph_attr.update({"dpi": 227, "fontsize": 20, "fontname": "Menlo", "rankdir": "TB"})
+        A.node_attr.update(
+            {
+                "shape": "rectangle",
+                "color": "#650021",
+                "style": "rounded",
+                "fontname": "Menlo",
+            }
+        )
+        A.edge_attr.update({"color": "#650021", "arrowsize": 0.5})
         return A

@@ -192,10 +192,13 @@ def test_PETPT_sensitivity_surface(petpt_grfn):
     assert Z.shape == (80, 60)
 
 
-@pytest.mark.skip("Need to update FIB for new GrFN schema")
 def test_FIB_execution(petpt_grfn, petasce_grfn):
     petpt_fib = petpt_grfn.to_FIB(petasce_grfn)
     petasce_fib = petasce_grfn.to_FIB(petpt_grfn)
+    A = petpt_fib.to_CAG_agraph()
+    A.draw("PETPT-FIB--new.pdf", prog="dot")
+    A = petasce_fib.to_CAG_agraph()
+    A.draw("PETASCE-FIB--new.pdf", prog="dot")
 
     pt_inputs = {name: 1 for name in petpt_grfn.inputs}
 
