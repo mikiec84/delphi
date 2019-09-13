@@ -31,7 +31,7 @@ FONT = choose_font()
 
 dodgerblue3 = "#1874CD"
 forestgreen = "#228b22"
-orange1 = "orange1"
+orange1 = "orange2"
 
 
 class ComputationalGraph(nx.DiGraph):
@@ -768,7 +768,13 @@ class ForwardInfluenceBlanket(ComputationalGraph):
         main_nodes = main_nodes - self.inputs - {self.output_node}
 
         orig_nodes = G.nodes(data=True)
-        deleted_nodes = orig_nodes - set(list(main_nodes) + self.inputs + [self.output_node])
+        deleted_nodes = set([n for n, _ in orig_nodes]) - set(list(main_nodes) + list(self.inputs) + [self.output_node] + list(self.cover_nodes))
+        self.add_edges_from(G.edges)
+        self.add_nodes_from([(n, d) for n, d in orig_nodes if n in deleted_nodes])
+        for node in deleted_nodes:
+            self.nodes[node]["color"] = orange1
+            self.nodes[node]["fontcolor"] = orange1
+            self.nodes[node]["fontname"] = FONT
 
         self.add_nodes_from([(n, d) for n, d in orig_nodes if n in self.inputs])
         for node in self.inputs:
