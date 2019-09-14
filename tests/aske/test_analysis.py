@@ -199,6 +199,8 @@ def test_FIB_execution(petpt_grfn, petasce_grfn):
     A.draw("PETPT-FIB--new.pdf", prog="dot")
     A = petasce_fib.to_CAG_agraph()
     A.draw("PETASCE-FIB--new.pdf", prog="dot")
+    A = petasce_fib.to_agraph()
+    A.draw("PETASCE-FIB-GrFN--new.pdf", prog="dot")
 
     pt_inputs = {name: 1 for name in petpt_grfn.inputs}
 

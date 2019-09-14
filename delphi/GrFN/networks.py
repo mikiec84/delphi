@@ -32,6 +32,7 @@ FONT = choose_font()
 dodgerblue3 = "#1874CD"
 forestgreen = "#228b22"
 orange1 = "orange2"
+red = "firebrick1"
 
 
 class ComputationalGraph(nx.DiGraph):
@@ -636,7 +637,6 @@ class GroundedFunctionNetwork(ComputationalGraph):
             for shared_var in shared_vars
             for full_var in shortname_vars(shared_var)
         }
-
         return ForwardInfluenceBlanket(self, full_shared_vars)
 
     def to_agraph(self):
@@ -738,10 +738,8 @@ class ForwardInfluenceBlanket(ComputationalGraph):
 
         def place_var_node(var_node):
             prev_funcs = list(G.predecessors(var_node))
-            if (
-                len(prev_funcs) > 0
-                and G.nodes[prev_funcs[0]]["label"] == "L"
-            ):
+            is_input_var = len(prev_funcs) == 0
+            if (not is_input_var and G.nodes[prev_funcs[0]]["label"] == "L"):
                 prev_func = prev_funcs[0]
                 add_nodes.extend([var_node, prev_func])
                 add_edges.append((prev_func, var_node))
@@ -753,27 +751,30 @@ class ForwardInfluenceBlanket(ComputationalGraph):
                 for var_node in G.predecessors(node):
                     if var_node not in main_nodes:
                         add_edges.append((var_node, node))
-                        if "::IF_" in var_node:
-                            if_func = list(G.predecessors(var_node))[0]
-                            add_nodes.extend([if_func, var_node])
-                            add_edges.append((if_func, var_node))
-                            for new_var_node in G.predecessors(if_func):
-                                add_edges.append((new_var_node, if_func))
-                                place_var_node(new_var_node)
-                        else:
-                            place_var_node(var_node)
+                        self.cover_nodes.add(var_node)
+                        # if "::IF_" in var_node:
+                        #     if_func = list(G.predecessors(var_node))[0]
+                        #     add_nodes.extend([if_func, var_node])
+                        #     add_edges.append((if_func, var_node))
+                        #     for new_var_node in G.predecessors(if_func):
+                        #         add_edges.append((new_var_node, if_func))
+                        #         place_var_node(new_var_node)
+                        # else:
+
 
         main_nodes |= set(add_nodes)
         main_edges |= set(add_edges)
         main_nodes = main_nodes - self.inputs - {self.output_node}
-
         orig_nodes = G.nodes(data=True)
-        deleted_nodes = set([n for n, _ in orig_nodes]) - set(list(main_nodes) + list(self.inputs) + [self.output_node] + list(self.cover_nodes))
-        self.add_edges_from(G.edges)
+
+        deleted_nodes = set([n for n, _ in orig_nodes]) - set(
+            list(main_nodes) + list(self.inputs) + [self.output_node] + list(self.cover_nodes)
+        )
+
         self.add_nodes_from([(n, d) for n, d in orig_nodes if n in deleted_nodes])
         for node in deleted_nodes:
-            self.nodes[node]["color"] = orange1
-            self.nodes[node]["fontcolor"] = orange1
+            self.nodes[node]["color"] = red
+            self.nodes[node]["fontcolor"] = red
             self.nodes[node]["fontname"] = FONT
 
         self.add_nodes_from([(n, d) for n, d in orig_nodes if n in self.inputs])
@@ -795,12 +796,28 @@ class ForwardInfluenceBlanket(ComputationalGraph):
         self.add_nodes_from([(n, d) for n, d in orig_nodes if n in main_nodes])
         for node in main_nodes:
             self.nodes[node]["fontname"] = FONT
+            self.nodes[node]["color"] = "black"
+            self.nodes[node]["fontcolor"] = "black"
 
+        output_basename = G.nodes[self.output_node]["cag_label"]
         self.add_node(self.output_node, **G.nodes[self.output_node])
-        self.nodes[self.output_node]["color"] = dodgerblue3
-        self.nodes[self.output_node]["fontcolor"] = dodgerblue3
+        for node in self.nodes:
+            if output_basename in node:
+                self.nodes[node]["color"] = dodgerblue3
+                self.nodes[node]["fontcolor"] = dodgerblue3
+                self.nodes[node]["penwidth"] = 3.0
+                self.nodes[node]["fontname"] = FONT
+
+        # self.nodes[self.output_node]["color"] = dodgerblue3
+        # self.nodes[self.output_node]["fontcolor"] = dodgerblue3
 
         self.add_edges_from(main_edges)
+        deleted_edges = list(set(G.edges) - main_edges)
+
+        self.add_edges_from(deleted_edges)
+        for n1, n2 in deleted_edges:
+            self.edges[n1, n2]["color"] = red
+
         self.call_graph = self.build_call_graph()
         self.function_sets = self.build_function_sets()
 
@@ -938,7 +955,7 @@ class ForwardInfluenceBlanket(ComputationalGraph):
                         v_attrs = self.nodes[pred_var]
                         v_name = v_attrs["cag_label"]
                         G.add_node(v_name, **self.nodes[pred_var])
-                        G.add_edge(v_name, cag_name)
+                        G.add_edge(v_name, cag_name, **self.edges[pred_fn, name])
 
         return G
 
@@ -961,13 +978,5 @@ class ForwardInfluenceBlanket(ComputationalGraph):
             CAG.nodes[name]["label"] = data["cag_label"]
         A = nx.nx_agraph.to_agraph(CAG)
         A.graph_attr.update({"dpi": 227, "fontsize": 20, "fontname": "Menlo", "rankdir": "TB"})
-        A.node_attr.update(
-            {
-                "shape": "rectangle",
-                "color": "#650021",
-                "style": "rounded",
-                "fontname": "Menlo",
-            }
-        )
-        A.edge_attr.update({"color": "#650021", "arrowsize": 0.5})
+        A.edge_attr.update({"color": "black", "arrowsize": 0.5})
         return A
