@@ -632,6 +632,9 @@ class GroundedFunctionNetwork(ComputationalGraph):
         ]
 
         shared_vars = set(this_var_nodes).intersection(set(other_var_nodes))
+        created_vars = [v for v in shared_vars if "IF" in v or "BK" in v]
+        for var in created_vars:
+            shared_vars.discard(var)
         full_shared_vars = {
             full_var
             for shared_var in shared_vars
@@ -761,7 +764,6 @@ class ForwardInfluenceBlanket(ComputationalGraph):
                         #         place_var_node(new_var_node)
                         # else:
 
-
         main_nodes |= set(add_nodes)
         main_edges |= set(add_edges)
         main_nodes = main_nodes - self.inputs - {self.output_node}
@@ -802,7 +804,7 @@ class ForwardInfluenceBlanket(ComputationalGraph):
         output_basename = G.nodes[self.output_node]["cag_label"]
         self.add_node(self.output_node, **G.nodes[self.output_node])
         for node in self.nodes:
-            if output_basename in node:
+            if output_basename in node or node in shared_nodes:
                 self.nodes[node]["color"] = dodgerblue3
                 self.nodes[node]["fontcolor"] = dodgerblue3
                 self.nodes[node]["penwidth"] = 3.0
