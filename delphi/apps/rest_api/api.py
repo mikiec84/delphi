@@ -61,6 +61,140 @@ def createNewModel():
     return jsonify({"status": "success"})
 
 
+@bp.route("/delphi/search-indicators", methods=["POST"])
+def search_indicators():
+    """
+    A very basic, naive text search for indicators with the following search criteria
+    - start: start year
+    - end: end year
+    - geolocation: location text
+    - match: matching string
+
+    The search returns a listing of distinct indicator names/variables that match the criteria
+    """
+    args = request.get_json()
+    start = args.get("start")
+    end = args.get("end")
+    geolocation = args.get("geolocation")
+    match = args.get("match")
+
+    sql = "SELECT DISTINCT `Variable` from indicator WHERE 1 = 1"
+    if match is not None:
+        sql = sql + f" AND (`Variable` LIKE '{match}%' OR `Variable` LIKE '% {match}%')" # trying to match prefix
+    if start is not None:
+        sql = sql + f" AND `Year` > {start}"
+    if end is not None:
+        sql = sql + f" AND `Year` < {end}"
+
+    print("Running SQL: ", sql)
+    records = list(engine.execute(sql))
+
+    result = []
+    for r in records:
+        result.append(r["Variable"])
+
+
+    return jsonify(result)
+
+
+def get_indicator_detail(indicator, start, end, geolocation):
+    """
+    Helper method to return raw indicator data, applying the following filters
+    - indicator: indicator string
+    - start: start yaer
+    - end: end year
+    - geolocation: geolocation string
+    """
+    indicator = indicator.replace("'", "''")
+
+    sql = "SELECT * from indicator WHERE 1 = 1"
+    if start is not None:
+        sql = sql + f" AND `Year` > {start}"
+    if end is not None:
+        sql = sql + f" AND `Year` < {end}"
+    sql = sql + f" AND `Variable` = '{indicator}'"
+    records = list(engine.execute(sql))
+    result = {}
+    for r in records:
+        unit, value, year, month, source = ( r["Unit"], r["Value"], r["Year"], r["Month"], r["Source"] )
+        value = float(re.findall(r"-?\d+\.?\d*", value)[0])
+
+        if unit is None:
+            unit = PLACEHOLDER_UNIT
+
+        _dict = {
+            "year": year,
+            "month": month,
+            "value": float(value),
+            "source": source,
+        }
+
+        if unit not in result:
+            result[unit] = []
+
+        result[unit].append(_dict)
+    return result
+
+
+
+@bp.route("/delphi/indicator-detail", methods=["POST"])
+def indicator_detail():
+    """
+    Returns raw indicator data given the following search criteria
+    - indicator: indicator string
+    - start: start year
+    - end: end year
+    - geolocation: geolocation string
+    """
+    args = request.get_json()
+    start = args.get("start")
+    end = args.get("end")
+    geolocation = args.get("geolocation")
+    indicator = args.get("indicator")
+
+    result = detail = get_indicator_detail(indicator, start, end, geolocation)
+    return jsonify(result)
+
+
+@bp.route("/delphi/search-concept-indicators", methods=["POST"])
+def search_concept_indicators():
+    """
+    Given a list of concepts,  this endpoint returns their respective matching
+    indicators. The search parameters are:
+    - concepts: a list of concepts
+    - start: start year
+    - end: end year
+    - geolocation: geolocation string
+    """
+    args = request.get_json()
+    concepts = args.get("concepts")
+    start = args.get("start")
+    end = args.get("end")
+    geolocation = args.get("geolocation")
+
+    result = {}
+    for concept in args.get("concepts"):
+        sql = "SELECT `Concept`, `Source`, `Indicator`, `Score` FROM concept_to_indicator_mapping "
+        sql = sql + f" WHERE `Concept` = '{concept}'"
+
+        mappings =  engine.execute(sql)
+        concept_result = []
+        for mapping in mappings:
+            indicator = mapping["Indicator"]
+            source = mapping["Source"]
+            score = mapping["Score"]
+            detail = get_indicator_detail(indicator, start, end, geolocation)
+            concept_result.append({
+                "name": indicator,
+                "score": score,
+                "source": source,
+                "value": detail
+            })
+        result[concept] = concept_result;
+    return jsonify(result)
+
+
+
 @bp.route("/delphi/search", methods=["POST"])
 def getIndicators():
     """
@@ -307,6 +441,10 @@ def getExperimentResults(modelID: str, experimentID: str):
 # ============
 # ICM API
 # ============
+@bp.route("/ping", methods=["GET"])
+def pint():
+    """ Health-check / Ping """
+    return jsonify({})
 
 
 @bp.route("/icm", methods=["POST"])
@@ -346,6 +484,15 @@ def getICMByUUID(uuid: str):
     """ Fetch an ICM by UUID"""
     _metadata = ICMMetadata.query.filter_by(id=uuid).first().deserialize()
     del _metadata["model_id"]
+    _metadata["icmProvider"] = "DUMMY"
+    _metadata["title"] = _metadata["id"]
+    _metadata["version"] = 1
+    _metadata["createdByUser"] = { "id": 1 } 
+    _metadata["lastUpdatedByUser"] = { "id": 1 } 
+    _metadata["created"] = _metadata["created"] + "T00:00:00Z"
+    _metadata["lastAccessed"] = _metadata["created"]
+    _metadata["lastUpdated"] = _metadata["created"]
+
     return jsonify(_metadata)
 
 
