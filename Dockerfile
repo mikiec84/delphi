@@ -35,9 +35,13 @@ WORKDIR /repo
 RUN git clone https://github.com/ml4ai/delphi.git
 
 WORKDIR /repo/delphi
+RUN git fetch
+RUN git checkout rest_api
+RUN git pull
 RUN pip install cython
 RUN pip install cmake
 RUN pip install futures
 RUN pip install -e .[test,docs]
+RUN alias python=python3
 RUN rm -rf build/
 RUN make extensions
