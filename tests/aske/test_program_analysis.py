@@ -17,23 +17,25 @@ DATA_DIR = "tests/data/program_analysis"
 
 def get_python_source(
     original_fortran_file
-) -> Tuple[str, str, str, str, str, Dict]:
+) -> Tuple[str, str, str, str, list, str]:
     return f2grfn.fortran_to_grfn(original_fortran_file, True, False, ".")
 
 
 def make_grfn_dict(original_fortran_file) -> Dict:
     pySrc, lambdas_filename, json_filename, python_filename, \
-    original_fortran, mode_mapper_dict = get_python_source(original_fortran_file)
+        mode_mapper_dict, original_fortran = get_python_source(
+            original_fortran_file)
     _dict = f2grfn.generate_grfn(
         pySrc[0][0],
         python_filename,
         lambdas_filename,
-        json_filename,
         mode_mapper_dict,
+        str(original_fortran_file),
         True
     )
 
-    return _dict
+    return json.dumps(_dict, sort_keys=True, indent=2)
+
 
 
 def postprocess_test_data_grfn_dict(_dict):
@@ -52,59 +54,59 @@ def postprocess_test_data_grfn_dict(_dict):
 
 @pytest.fixture
 def crop_yield_python_IR_test():
-    yield get_python_source(Path(f"{DATA_DIR}/crop_yield.f"))[0]
+    yield get_python_source(Path(f"{DATA_DIR}/crop_yield.f"))[0][0]
 
 
 @pytest.fixture
 def PETPT_python_IR_test():
-    yield get_python_source(Path(f"{DATA_DIR}/PETPT.for"))[0]
+    yield get_python_source(Path(f"{DATA_DIR}/PETPT.for"))[0][0]
 
 
 @pytest.fixture
 def io_python_IR_test():
-    yield get_python_source(Path(f"{DATA_DIR}/io-tests/iotest_05.for"))[0]
+    yield get_python_source(Path(f"{DATA_DIR}/io-tests/iotest_05.for"))[0][0]
 
 
 @pytest.fixture
 def array_python_IR_test():
-    yield get_python_source(Path(f"{DATA_DIR}/arrays/arrays-basic-06.f"))[0]
+    yield get_python_source(Path(f"{DATA_DIR}/arrays/arrays-basic-06.f"))[0][0]
 
 
 @pytest.fixture
 def do_while_python_IR_test():
-    yield get_python_source(Path(f"{DATA_DIR}/do-while/do_while_04.f"))[0]
+    yield get_python_source(Path(f"{DATA_DIR}/do-while/do_while_04.f"))[0][0]
 
 
 @pytest.fixture
 def derived_type_python_IR_test():
     yield get_python_source(
-        Path(f"{DATA_DIR}/derived-types/derived-types-04.f"))[0]
+        Path(f"{DATA_DIR}/derived-types/derived-types-04.f"))[0][0]
 
 
 @pytest.fixture
 def cond_goto_python_IR_test():
-    yield get_python_source(Path(f"{DATA_DIR}/goto/goto_02.f"))[0]
+    yield get_python_source(Path(f"{DATA_DIR}/goto/goto_02.f"))[0][0]
 
 
 @pytest.fixture
 def uncond_goto_python_IR_test():
-    yield get_python_source(Path(f"{DATA_DIR}/goto/goto_08.f"))[0]
+    yield get_python_source(Path(f"{DATA_DIR}/goto/goto_08.f"))[0][0]
 
 
 @pytest.fixture
 def diff_level_goto_python_IR_test():
-    yield get_python_source(Path(f"{DATA_DIR}/goto/goto_09.f"))[0]
+    yield get_python_source(Path(f"{DATA_DIR}/goto/goto_09.f"))[0][0]
 
 
 @pytest.fixture
 def save_python_IR_test():
     yield get_python_source(
-        Path(f"{DATA_DIR}" f"/save/simple_variables/save-02.f"))[0]
+        Path(f"{DATA_DIR}" f"/save/simple_variables/save-02.f"))[0][0]
 
 
 @pytest.fixture
 def cycle_exit_python_IR_test():
-    yield get_python_source(Path(f"{DATA_DIR}/cycle/cycle_03.f"))[0]
+    yield get_python_source(Path(f"{DATA_DIR}/cycle/cycle_03.f"))[0][0]
 
 
 @pytest.fixture
@@ -116,15 +118,30 @@ def module_python_IR_test():
 @pytest.fixture
 def continuation_lines_python_IR_test():
     yield get_python_source(
-        Path(f"{DATA_DIR}" f"/continuation_line/continuation-lines-01.for"))[0]
+        Path(f"{DATA_DIR}" f"/continuation_line/continuation-lines-01.for"))[0][0]
 
 
 @pytest.fixture
 def continuation_lines_f90_python_IR_test():
     yield get_python_source(
-        Path(f"{DATA_DIR}" f"/continuation_line/continuation-lines-02.f90"))[0]
+        Path(f"{DATA_DIR}" f"/continuation_line/continuation-lines-02.f90"))[0][0]
+
+
+@pytest.fixture
+def SIR_python_IR_test():
+    yield get_python_source(
+        Path(f"{DATA_DIR}" f"/SIR-Gillespie-SD_inline.f"))[0][0]
 
     
+@pytest.fixture
+def array_to_func_python_IR_test():
+    yield get_python_source(
+        Path(f"{DATA_DIR}" f"/array_func_loop/array-to-func_06.f"))[0][0]
+
+@pytest.fixture
+def multidimensional_array_test():
+    yield make_grfn_dict(Path(f"{DATA_DIR}/arrays/arrays-basic-06.f"))
+
 #########################################################
 #                                                       #
 #               TARGET PYTHON TEST FILE                 #
@@ -196,11 +213,11 @@ def test_module_pythonIR_generation(module_python_IR_test):
     src = module_python_IR_test[0]
     with open(f"{DATA_DIR}/modules/test_module_08.py", "r") as f:
         python_src = f.read()
-    assert src[1] == python_src
+    assert src[1][0] == python_src
 
     with open(f"{DATA_DIR}/modules/m_mymod8.py", "r") as f:
         python_src = f.read()
-    assert src[0] == python_src
+    assert src[0][0] == python_src
 
 
 def test_cycle_exit_pythonIR_generation(cycle_exit_python_IR_test):
@@ -221,3 +238,21 @@ def test_continue_line_f90_pythonIR_generation(
     with open(f"{DATA_DIR}/continuation_line/continuation-lines-02.py", "r") as f:
         python_src = f.read()
     assert continuation_lines_f90_python_IR_test[0] == python_src
+
+
+def test_SIR_pythonIR_generation(SIR_python_IR_test):
+    with open(f"{DATA_DIR}/SIR-Gillespie-SD_inline.py", "r") as f:
+        python_src = f.read()
+    assert SIR_python_IR_test[0] == python_src
+
+
+def test_array_to_func_pythonIR_generation(array_to_func_python_IR_test):
+    with open(f"{DATA_DIR}/array_func_loop/array-to-func_06.py", "r") as f:
+        python_src = f.read()
+    assert array_to_func_python_IR_test[0] == python_src
+
+
+def test_multidimensional_array_grfn_generation(multidimensional_array_test):
+    with open(f"{DATA_DIR}/arrays/arrays-basic-06_GrFN.json", "r") as f:
+        grfn_dict = f.read()
+    assert str(multidimensional_array_test) == grfn_dict

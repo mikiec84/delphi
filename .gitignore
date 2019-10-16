@@ -1,5 +1,6 @@
 # Vim swap files
 *.swp
+*.swo
 
 # MacOS:
 .DS_Store
@@ -18,8 +19,9 @@ __pycache__/
 # Distribution / packaging
 .Python
 env/
+data/*
 scripts/data/
-build/
+build/*
 bin/
 develop-eggs/
 dist/
@@ -152,3 +154,4 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 _deps
+delphi.db

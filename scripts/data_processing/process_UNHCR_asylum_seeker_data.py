@@ -49,9 +49,9 @@ def clean_UNHCR_data():
     # are only present in the 2017 and 2018 entries. The UNHCR's reasoning is
     # that with such few counts and being such recent data, the privacy of these
     # individuals could be easily compromised. In my cleaning, I have decided to
-    # round-up from the median value between 1-4. Thus all * are being changed
+    # round-down from the median value between 1-4. Thus all * are being changed
     # to 2.
-    df = df.replace("*", 2)
+    df = df.replace("*", "")
 
     # Values are originally inferred as strings from the raw data because of the
     #'*'.
@@ -91,7 +91,7 @@ def clean_UNHCR_data():
     )
 
     df.to_csv(
-        str(data_dir / "south_sudan_data_UNHCR.tsv"), index=False, sep="\t"
+        str(data_dir / "indicator_data_UNHCR.tsv"), index=False, sep="\t"
     )
 
 

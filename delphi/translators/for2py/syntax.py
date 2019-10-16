@@ -10,11 +10,10 @@ from typing import Tuple, Optional
 ################################################################################
 
 def line_is_comment(line: str) -> bool:
-    """
-    From FORTRAN Language Reference
-    (https://docs.oracle.com/cd/E19957-01/805-4939/z40007332024/index.html):
+    """From FORTRAN Language Reference
+    (https://docs.oracle.com/cd/E19957-01/805-4939/z40007332024/index.html)
 
-    A line with a c, C, *, d, D, or ! in column one is a comment line, except
+    A line with a c, C, '*', d, D, or ! in column one is a comment line, except
     that if the -xld option is set, then the lines starting with D or d are
     compiled as debug lines. The d, D, and ! are nonstandard.
 
@@ -118,7 +117,8 @@ RE_CASE_STMT = re.compile(CASE_STMT, re.I)
 STOP_STMT = r"\s*(\d+|&)?\s*stop\s*"
 RE_STOP_STMT = re.compile(STOP_STMT, re.I)
 
-TYPE_NAMES = r"^\s*(integer|real|double\s+precision|complex|character|logical|dimension|type)\W*"
+TYPE_NAMES = r"^\s*(integer|real|double\s+precision|complex|character|logical" \
+             r"|dimension|type|parameter)\W*"
 RE_TYPE_NAMES = re.compile(TYPE_NAMES, re.I)
 
 # EXECUTABLE_CODE_START is a list of regular expressions matching

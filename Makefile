@@ -1,9 +1,11 @@
+all: test docs
+
 docs:
 	cd docs; make html
 
 extensions: 
 	mkdir -p build && \
-	cd build  && cmake .. &&  cmake --build . -- -j && \
+	cd build  && cmake .. &&  cmake --build . -- -j DelphiPython && \
 	cp *.so ../delphi/cpp
 
 test: extensions
