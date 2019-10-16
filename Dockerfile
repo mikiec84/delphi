@@ -40,6 +40,7 @@ RUN pip install cmake
 RUN pip install futures
 RUN git fetch
 RUN git checkout rest_api
+RUN git pull
 RUN pip install -e .[test,docs]
 RUN rm -rf build/
 RUN make extensions
