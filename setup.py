@@ -92,6 +92,7 @@ setup(
         "ruamel.yaml",
         "flask-WTF",
         "flask-codemirror",
+        "flask_executor",
         "pygments",
         "sympy",
         "plotly",
