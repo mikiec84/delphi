@@ -23,7 +23,7 @@ class Node;
 class Indicator;
 
 const double TAU = 1;
-const double tuning_param = 0.0001;
+const double tuning_param = 1;//0.0001;
 
 typedef multimap<pair<int, int>, pair<int, int>>::iterator MMapIterator;
 
@@ -1056,11 +1056,21 @@ void AnalysisGraph::sample_predicted_latent_state_sequences(
       this->res,
       vector<VectorXd>(this->n_timesteps, VectorXd(this->num_vertices() * 2)));
 
+  /*
   for (int samp = 0; samp < this->res; samp++) {
     for (int t = 0; t < this->n_timesteps; t++) {
       const Eigen::MatrixXd& A_t =
           tuning_param * t * this->transition_matrix_collection[samp];
       this->predicted_latent_state_sequences[samp][t] = A_t.exp() * this->s0;
+    }
+  }
+  */
+  for (int samp = 0; samp < this->res; samp++) {
+    int pred_step = initial_prediction_step;
+    for (int ts = 0; ts < this->n_timesteps; ts++) {
+      const Eigen::MatrixXd& A_t = pred_step*this->transition_matrix_collection[samp]; 
+      this->predicted_latent_state_sequences[samp][ts] = A_t.exp() * this->s0;
+      pred_step++;
     }
   }
 }
