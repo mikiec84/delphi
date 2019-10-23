@@ -31,8 +31,8 @@ def test_cpp_extensions():
     # InitialBeta.MEAN
     # InitialBeta.RANDOM - A random value between [-1, 1]
     G.construct_beta_pdfs()
-    G.train_model(2015, 1, 2015, 12, 1000, 10000, initial_beta=InitialBeta.ZERO)
-    preds = G.generate_prediction(2015, 1, 2016, 12)
+    G.train_model(2011, 7, 2018, 12, 1000, 10000, initial_beta=InitialBeta.ZERO)
+    preds = G.generate_prediction(2011, 7, 2018, 12)
     pred_plot(preds, "New asylum seeking applicants", save_as="pred_plot.pdf")
 
 def test_delete_indicator():
