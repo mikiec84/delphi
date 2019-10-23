@@ -420,7 +420,7 @@ class GroundedFunctionNetwork(ComputationalGraph):
         json_filename: str,
         stem: str,
         fortran_file: str,
-        mode_mapper_dict: dict,
+        mode_mapper_dict: list,
         save_file: bool = False
     ):
         """Builds GrFN object from Python source code."""
@@ -449,8 +449,8 @@ class GroundedFunctionNetwork(ComputationalGraph):
             lambdas_path,
             json_filename,
             stem,
-            fortran_filename,
             mode_mapper_dict,
+            fortran_filename
         ) = f2grfn.fortran_to_grfn(fortran_file, True, True, str(tmpdir))
 
         G = cls.from_python_src(pySrc, lambdas_path, json_filename, stem,
@@ -696,7 +696,7 @@ class GroundedFunctionNetwork(ComputationalGraph):
         functions. """
 
         A = nx.nx_agraph.to_agraph(self.call_graph)
-        A.graph_attr.update({"dpi": 227, "fontsize": 20, "fontname": "Menlo"})
+        A.graph_attr.update({"dpi": 227, "fontsize": 20, "fontname": "Menlo", "rankdir": "TB"})
         A.node_attr.update(
             {"shape": "rectangle", "color": "#650021", "style": "rounded"}
         )

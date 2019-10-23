@@ -1,5 +1,5 @@
 from delphi.cpp.DelphiPython import AnalysisGraph, InitialBeta
-from delphi.evaluation_port import pred_plot
+from delphi.evaluation import pred_plot
 import pytest
 from matplotlib import pyplot as plt
 from tqdm import trange
@@ -16,11 +16,8 @@ def test_cpp_extensions():
     ]
     G = AnalysisGraph.from_causal_fragments(statements)
     G.map_concepts_to_indicators()
-    G.replace_indicator(
-        "UN/events/human/human_migration",
-        "Net migration",
-        "New asylum seeking applicants",
-        "UNHCR",
+    G["UN/events/human/human_migration"].replace_indicator(
+        "Net migration", "New asylum seeking applicants", "UNHCR"
     )
     G.to_png()
 
@@ -35,6 +32,7 @@ def test_cpp_extensions():
     preds = G.generate_prediction(2011, 7, 2018, 12)
     pred_plot(preds, "New asylum seeking applicants", save_as="pred_plot.pdf")
 
+
 def test_delete_indicator():
     statements = [
         (
@@ -48,24 +46,29 @@ def test_delete_indicator():
     G.map_concepts_to_indicators()
     G.print_indicators()
     print("\n")
-    G.replace_indicator(
-        "UN/events/human/human_migration",
-        "Net migration",
-        "New asylum seeking applicants",
-        "UNHCR",
+    G["UN/events/human/human_migration"].replace_indicator(
+        "Net migration", "New asylum seeking applicants", "UNHCR"
     )
     G.print_indicators()
     print("\n")
-    G.set_indicator("UN/events/human/human_migration", "Net Migration", "MITRE12")
+    G.set_indicator(
+        "UN/events/human/human_migration", "Net Migration", "MITRE12"
+    )
 
     G.print_indicators()
     print("\n")
-    G.delete_indicator("UN/events/human/human_migration", "New asylum seeking applicants")
+    G.delete_indicator(
+        "UN/events/human/human_migration", "New asylum seeking applicants"
+    )
 
     G.print_indicators()
     print("\n")
 
-    G.set_indicator("UN/events/human/human_migration", "New asylum seeking applicants", "UNHCR")
+    G.set_indicator(
+        "UN/events/human/human_migration",
+        "New asylum seeking applicants",
+        "UNHCR",
+    )
 
     G.delete_all_indicators("UN/events/human/human_migration")
 
