@@ -15,18 +15,7 @@ from wtforms.fields import SubmitField
 from flask_codemirror import CodeMirror
 from pygments import highlight
 
-from delphi.apps.CodeExplorer.surface_plots import (
-    get_grfn_surface_plot,
-    get_fib_surface_plot,
-)
-from delphi.apps.CodeExplorer.cyjs import (
-    to_cyjs_grfn,
-    to_cyjs_cag,
-    to_cyjs_fib,
-    PYTHON_LEXER,
-    THIS_FOLDER,
-    PYTHON_FORMATTER,
-)
+from delphi.apps.ModX.cyjs import to_cyjs_grfn, to_cyjs_cag
 
 from delphi.translators.for2py import preprocessor, translate, get_comments
 from delphi.translators.for2py import pyTranslate, genPGM, For2PyError
@@ -84,7 +73,7 @@ def process_text_and_code():
     if os.path.isfile(norm_json_path):
         os.remove(norm_json_path)
 
-    GroundedFunctionNetwork.from_fortran_file(fortran_path, save_file=True)
+    G = GroundedFunctionNetwork.from_fortran_file(fortran_path, save_file=True)
     cur_dir = os.getcwd()
     os.chdir(os.path.join(os.environ["AUTOMATES_LOC"], "text_reading/"))
     sp.run([
@@ -99,9 +88,12 @@ def process_text_and_code():
         os.remove(norm_json_path)
     if os.path.isfile(tr_json_path):
         os.rename(tr_json_path, norm_json_path)
+
     grfn = json.load(open(norm_json_path, "r"))
     return jsonify({
         "link_data": {str(k): v for k, v in make_link_tables(grfn).items()},
+        "GrFN": to_cyjs_grfn(G),
+        "CAG": to_cyjs_cag(G.to_CAG()),
         "models": [f for f in os.listdir(os.path.join(SOURCE_FILES, "models"))
                    if f.endswith(".json")]
     })

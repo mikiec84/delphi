@@ -154,3 +154,6 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 delphi.db
+
+# JavaScript helpers
+.jshintrc

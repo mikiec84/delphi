@@ -1,6 +1,8 @@
 var SOURCE_DOC = null;
 var SOURCE_CODE = null;
 var CURR_MODEL = null;
+var GrFN = null;
+var GrFN_CAG = null;
 
 var SOURCE_FILES = "/static/source_model_files/";
 
@@ -23,13 +25,13 @@ $(function() {
   {},
   function(data) {
     // Populate the code/docs/models lists
-    _.forEach(data["code"], function(code_file) {
+    _.forEach(data.code, function(code_file) {
       $("#source-file-list").append("<a class=\"list-group-item list-group-item-action\" role=\"tab\" data-toggle=\"list\">" + code_file + "</a>");
     });
-    _.forEach(data["docs"], function(doc_file) {
+    _.forEach(data.docs, function(doc_file) {
       $("#document-list").append("<a class=\"list-group-item list-group-item-action\" role=\"tab\" data-toggle=\"list\">" + doc_file + "</a>");
     });
-    _.forEach(data["models"], function(model_file) {
+    _.forEach(data.models, function(model_file) {
       var model_name = model_file.replace(".json", "");
       $("#model-list").append("<a id=model-" + model_name + " class=\"list-group-item list-group-item-action\" role=\"tab\" data-toggle=\"list\">" + model_name + "</a>");
     });
@@ -94,7 +96,7 @@ $(function() {
       cache: false,
       contentType: false,
       processData: false
-    })
+    });
   });
 
   $("#model-gen-button").on("click", (e) => {
@@ -106,39 +108,21 @@ $(function() {
       type: "POST",
       success: function(data) {
         $("#grounding-accordian").empty();
-        _.forEach(data["link_data"], (rows, var_id) => {
-          var variable_name_comps = _.split(var_id.replace(/'/g, "")
-                                                  .replace("(", "")
-                                                  .replace(")", ""), ", ");
-          var variable_name = _.join(_.drop(variable_name_comps), "::");
-          var variable_uname = _.join(_.drop(variable_name_comps), "__");
-          $("#grounding-accordian").append('<div class="card"><div class="card-header" id="heading-' + variable_uname + '"><h4 class="mb-0"><button class="btn btn-link text-dark" data-toggle="collapse" data-target="#collapse-' + variable_uname + '" aria-expanded="true" aria-controls="collapse-' + variable_uname + '">' + variable_name +'</button></h4></div><div id="collapse-' + variable_uname + '" class="collapse" aria-labelledby="heading-' + variable_uname + '" data-parent="#grounding-accordian"><div class="card-body grounding-table"><table class="table table-sm table-hover"><thead><tr><th scope="col">L score</th><th scope="col">Comment</th><th scope="col">V-C score</th><th scope="col">Text-span</th><th scope="col">C-T score</th><th scope="col">Equation symbol</th><th scope="col">T-E score</th></tr></thead><tbody id=body-'+ variable_uname + '></tbody></table></div></div></div>');
-          if (rows.length > 0) {
-            // Get high scores for all four link measures
-            var max_l = _.maxBy(rows, (r) => { return r.link_score; }).link_score;
-            var max_vc = _.maxBy(rows, (r) => { return r.vc_score; }).vc_score;
-            var max_ct = _.maxBy(rows, (r) => { return r.ct_score; }).ct_score;
-            var max_te = _.maxBy(rows, (r) => { return r.te_score; }).te_score;
 
-            // Add row for each entry in table data, bold highest scores
-            _.forEach(rows, (r) => {
-              var ls = get_grounding_cell(r.link_score, r.link_score == max_l);
-              var vc = get_grounding_cell(r.vc_score, r.vc_score == max_vc);
-              var ct = get_grounding_cell(r.ct_score, r.ct_score == max_ct);
-              var te = get_grounding_cell(r.te_score, r.te_score == max_te);
+        build_grounding_table(data.link_data);
 
-              var com = get_grounding_cell(r.comm, false);
-              var txt = get_grounding_cell(r.txt, false);
-              var eqn = get_grounding_cell(r.eqn, false);
+        var grfn_nodes = data.GrFN.nodes;
+        var grfn_edges = data.GrFN.edges;
+        var grfn_data = grfn_nodes.concat(grfn_edges);
+        GrFN = make_cyto_viewer("#grfn-graph", grfn_data);
 
-              var vals = ls + com + vc + txt + ct + eqn + te;
-              $("#body-" + variable_uname).append('<tr>' + vals + '</tr>');
-            });
-          }
-        });
+        // var cag_nodes = data.CAG.nodes;
+        // var cag_edges = data.CAG.edges;
+        // var cag_data = cag_nodes.concat(cag_edges);
+        // GrFN_CAG = make_cyto_viewer("#cag-graph", cag_data);
 
         $("#model-list").empty();
-        _.forEach(data["models"], function(model_file) {
+        _.forEach(data.models, function(model_file) {
           var model_name = model_file.replace(".json", "");
           $("#model-list").append("<a id=model-" + model_name + " class=\"list-group-item list-group-item-action\" role=\"tab\" data-toggle=\"list\">" + model_name + "</a>");
         });
@@ -162,7 +146,7 @@ $(function() {
         $("#model-load-modal").modal("toggle");
       },
       error: function(data) {
-        console.log(err);
+        console.log(data);
         $("#model-load-modal").modal("toggle");
       }
     });
@@ -184,36 +168,7 @@ $(function() {
       type: 'POST',
       success: function(data) {
         $("#grounding-accordian").empty();
-        _.forEach(data, (rows, var_id) => {
-          var variable_name_comps = _.split(var_id.replace(/'/g, "")
-                                                  .replace("(", "")
-                                                  .replace(")", ""), ", ");
-          var variable_name = _.join(_.drop(variable_name_comps), "::");
-          var variable_uname = _.join(_.drop(variable_name_comps), "__");
-          $("#grounding-accordian").append('<div class="card"><div class="card-header" id="heading-' + variable_uname + '"><h4 class="mb-0"><button class="btn btn-link text-dark" data-toggle="collapse" data-target="#collapse-' + variable_uname + '" aria-expanded="true" aria-controls="collapse-' + variable_uname + '">' + variable_name +'</button></h4></div><div id="collapse-' + variable_uname + '" class="collapse" aria-labelledby="heading-' + variable_uname + '" data-parent="#grounding-accordian"><div class="card-body grounding-table"><table class="table table-sm table-hover"><thead><tr><th scope="col">L score</th><th scope="col">Comment</th><th scope="col">V-C score</th><th scope="col">Text-span</th><th scope="col">C-T score</th><th scope="col">Equation symbol</th><th scope="col">T-E score</th></tr></thead><tbody id=body-'+ variable_uname + '></tbody></table></div></div></div>');
-          if (rows.length > 0) {
-            // Get high scores for all four link measures
-            var max_l = _.maxBy(rows, (r) => { return r.link_score; }).link_score;
-            var max_vc = _.maxBy(rows, (r) => { return r.vc_score; }).vc_score;
-            var max_ct = _.maxBy(rows, (r) => { return r.ct_score; }).ct_score;
-            var max_te = _.maxBy(rows, (r) => { return r.te_score; }).te_score;
-
-            // Add row for each entry in table data, bold highest scores
-            _.forEach(rows, (r) => {
-              var ls = get_grounding_cell(r.link_score, r.link_score == max_l);
-              var vc = get_grounding_cell(r.vc_score, r.vc_score == max_vc);
-              var ct = get_grounding_cell(r.ct_score, r.ct_score == max_ct);
-              var te = get_grounding_cell(r.te_score, r.te_score == max_te);
-
-              var com = get_grounding_cell(r.comm, false);
-              var txt = get_grounding_cell(r.txt, false);
-              var eqn = get_grounding_cell(r.eqn, false);
-
-              var vals = ls + com + vc + txt + ct + eqn + te;
-              $("#body-" + variable_uname).append('<tr>' + vals + '</tr>');
-            });
-          }
-        });
+        build_grounding_table(data);
       },
       error: (error) => { console.log(error); }
     });
@@ -252,15 +207,45 @@ function get_model_pdf(model_name) {
   switch (model_name) {
     case "SIR-simple":
       return "ideal_sir_model.pdf";
-      break;
     case "petasce":
       return "2005-THE ASCE STANDARDIZED REFERENCE EVAPOTRANSPIRATION EQUATION.pdf";
-      break;
     case "SIR-Gillespie":
       return "sir_gillespie_model.pdf";
-      break;
     default:
       return "ideal_sir_model.pdf";
-      break;
   }
+}
+
+
+function build_grounding_table(data) {
+  _.forEach(data, (rows, var_id) => {
+    var variable_name_comps = _.split(var_id.replace(/'/g, "")
+                                            .replace("(", "")
+                                            .replace(")", ""), ", ");
+    var variable_name = _.join(_.drop(variable_name_comps), "::");
+    var variable_uname = _.join(_.drop(variable_name_comps), "__");
+    $("#grounding-accordian").append('<div class="card"><div class="card-header" id="heading-' + variable_uname + '"><h4 class="mb-0"><button class="btn btn-link text-dark" data-toggle="collapse" data-target="#collapse-' + variable_uname + '" aria-expanded="true" aria-controls="collapse-' + variable_uname + '">' + variable_name +'</button></h4></div><div id="collapse-' + variable_uname + '" class="collapse" aria-labelledby="heading-' + variable_uname + '" data-parent="#grounding-accordian"><div class="card-body grounding-table"><table class="table table-sm table-hover"><thead><tr><th scope="col">L score</th><th scope="col">Comment</th><th scope="col">V-C score</th><th scope="col">Text-span</th><th scope="col">C-T score</th><th scope="col">Equation symbol</th><th scope="col">T-E score</th></tr></thead><tbody id=body-'+ variable_uname + '></tbody></table></div></div></div>');
+    if (rows.length > 0) {
+      // Get high scores for all four link measures
+      var max_l = _.maxBy(rows, (r) => { return r.link_score; }).link_score;
+      var max_vc = _.maxBy(rows, (r) => { return r.vc_score; }).vc_score;
+      var max_ct = _.maxBy(rows, (r) => { return r.ct_score; }).ct_score;
+      var max_te = _.maxBy(rows, (r) => { return r.te_score; }).te_score;
+
+      // Add row for each entry in table data, bold highest scores
+      _.forEach(rows, (r) => {
+        var ls = get_grounding_cell(r.link_score, r.link_score == max_l);
+        var vc = get_grounding_cell(r.vc_score, r.vc_score == max_vc);
+        var ct = get_grounding_cell(r.ct_score, r.ct_score == max_ct);
+        var te = get_grounding_cell(r.te_score, r.te_score == max_te);
+
+        var com = get_grounding_cell(r.comm, false);
+        var txt = get_grounding_cell(r.txt, false);
+        var eqn = get_grounding_cell(r.eqn, false);
+
+        var vals = ls + com + vc + txt + ct + eqn + te;
+        $("#body-" + variable_uname).append('<tr>' + vals + '</tr>');
+      });
+    }
+  });
 }
