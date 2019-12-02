@@ -116,10 +116,10 @@ $(function() {
         var grfn_data = grfn_nodes.concat(grfn_edges);
         GrFN = make_cyto_viewer("#grfn-graph", grfn_data);
 
-        // var cag_nodes = data.CAG.nodes;
-        // var cag_edges = data.CAG.edges;
-        // var cag_data = cag_nodes.concat(cag_edges);
-        // GrFN_CAG = make_cyto_viewer("#cag-graph", cag_data);
+        var cag_nodes = data.CAG.nodes;
+        var cag_edges = data.CAG.edges;
+        var cag_data = cag_nodes.concat(cag_edges);
+        GrFN_CAG = make_cyto_viewer("#cag-graph", cag_data);
 
         $("#model-list").empty();
         _.forEach(data.models, function(model_file) {
