@@ -1107,7 +1107,7 @@ class PythonCodeGenerator(object):
                     if varMatch:
                         var = varMatch.group(1)
                         self.pyStrings.append(
-                            f'"{self.variableMap[var.strip()]}",'
+                            f'"{self.variableMap[var.strip()]["type"]}",'
                         )
                 self.pyStrings.append("])" + printState.sep)
                 self.pyStrings.append(
@@ -1132,7 +1132,7 @@ class PythonCodeGenerator(object):
                     if varMatch:
                         var = varMatch.group(1)
                         self.pyStrings.append(
-                            f'"{self.variableMap[var.strip()]}",'
+                            f'"{self.variableMap[var.strip()]["type"]}",'
                         )
 
                 self.pyStrings.append("])" + printState.sep)

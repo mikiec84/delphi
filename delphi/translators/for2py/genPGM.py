@@ -231,7 +231,9 @@ class GrFNGenerator(object):
         self.bypass_io = r"^format_\d+$|^format_\d+_obj$|^file_\d+$" \
                          r"|^write_list_\d+$|^write_line$|^format_\d+_obj" \
                          r".*|^Format$|^list_output_formats$|" \
-                         r"^write_list_stream$|^file_\d+\.write$"
+                         r"^write_list_stream$|^file_\d+\.write$|" \
+                         r"^output_fmt$"
+
         self.re_bypass_io = re.compile(self.bypass_io, re.I)
 
         self.process_grfn = {
