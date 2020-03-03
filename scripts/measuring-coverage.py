@@ -1,11 +1,11 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 """ This file contains code to carry out a simple estimate of the amount of
     Fortran code 'handled' by for2py.
 
     COMMAND-LINE INVOCATION:
 
-        python3.7 measure-coverage.py <directory with Fortran code files>
+        ./measure-coverage.py <directory with Fortran code files>
 
 
     ADDING HANDLED LANGUAGE CONSTRUCTS:
@@ -22,15 +22,20 @@ import os
 import sys
 import json
 import logging
+import argparse
+from tqdm import tqdm
 from itertools import chain
 from future.utils import lmap
-from tqdm import tqdm
 from delphi.utils.fp import flatten
 from delphi.translators.for2py import preprocessor
 from delphi.translators.for2py.syntax import *
 
 
-FORTRAN_EXTENSIONS = [".f", ".f90", ".for"]
+# Check Python version - the script needs Python 3.6 or 3.7.
+
+assert sys.version_info.major == 3 and sys.version_info.minor in (6, 7)
+
+FORTRAN_EXTENSIONS = {".f", ".f90", ".for"}
 
 ################################################################################
 #                                                                              #
@@ -193,7 +198,7 @@ def line_is_handled(filename, line):
             return True, unhandled_keywds, unhandled_lines, used_modules
 
     # For lines that contain unhandled constructs, check whether they contain
-    # actually Fortran keywords or are just simple Fortran code lines
+    # actual Fortran keywords or are just simple Fortran code lines
     if first_wd in F_KEYWDS:
         unhandled_keywds.add(first_wd)
     else:
@@ -256,7 +261,7 @@ def process_lines(filename, lines):
 def process_file(filename):
     """
         This function processes one individual Fortran file and returns the
-        results obtained from it
+        results obtained from it.
     """
     # Get a list of pre-processed lines contained within the file
     code_lines = get_code_lines(filename)
@@ -300,6 +305,7 @@ def process_dir(dirname):
                 h_files,
                 u_modules,
             ) = process_file(filepath)
+
             # Add the result to the total counters
             ntot += ftot
             nhandled += fhandled
@@ -312,10 +318,11 @@ def process_dir(dirname):
                     unhandled_keywds[keywd] = u_keywds[keywd]
             unhandled_lines |= u_lines
             nfiles += 1
-            if ftot!=0:
-                pct_handled = fhandled / ftot * 100
-            else:
+            if ftot == 0:
+                logging.debug(f"Ignoring {filepath} [file is empty]")
                 continue
+            else:
+                pct_handled = fhandled / ftot * 100
 
             file_map[filepath] = {
                 "Total number of lines": ftot,
@@ -366,8 +373,6 @@ def print_results(results):
 
 
 if __name__ == "__main__":
-    import argparse
-
     parser = argparse.ArgumentParser(
         description="Measure for2py coverage of a directory."
     )
@@ -381,5 +386,7 @@ if __name__ == "__main__":
 
     results = process_dir(args.directory)
 
+    coverage_results_dict = results[-1]
+
     with open("coverage_file_map.json", "w") as fp:
-        json.dump(results[-1], fp, indent=4)
+        json.dump(coverage_results_dict, fp, indent=4)
