@@ -283,17 +283,14 @@ def process_dir(dirname):
     list_of_files = os.listdir(dirname)
     xs = flatten(
         lmap(
-            lambda t: lmap(
-                lambda filename: t[0] + "/" + filename, t[2]
-            ),
+            lambda t: lmap(lambda filename: f"{t[0]}/{filename}", t[2]),
             os.walk(dirname),
         )
     )
     all_files = list(xs)
     # Iterate through each file one by one
     for filepath in tqdm(all_files, ncols=80):
-        _, fext = os.path.splitext(filepath)
-        if fext in FORTRAN_EXTENSIONS:
+        if os.path.splitext(filepath)[1] in FORTRAN_EXTENSIONS:
             # Process the contents of the file and get the results
             (
                 ftot,
@@ -315,7 +312,11 @@ def process_dir(dirname):
                     unhandled_keywds[keywd] = u_keywds[keywd]
             unhandled_lines |= u_lines
             nfiles += 1
-            pct_handled = fhandled / ftot * 100
+            if ftot!=0:
+                pct_handled = fhandled / ftot * 100
+            else:
+                continue
+
             file_map[filepath] = {
                 "Total number of lines": ftot,
                 "Number of lines handled": fhandled,
