@@ -21,14 +21,16 @@
 import os
 import sys
 import json
+from pathlib import Path
 import logging
 import argparse
 from tqdm import tqdm
 from itertools import chain
 from future.utils import lmap
-from delphi.utils.fp import flatten
+from delphi.utils.fp import flatten, pairwise
 from delphi.translators.for2py import preprocessor
 from delphi.translators.for2py.syntax import *
+from pygraphviz import AGraph
 
 
 # Check Python version - the script needs Python 3.6 or 3.7.
@@ -270,7 +272,7 @@ def process_file(filename):
     return results
 
 
-def process_dir(dirname):
+def process_dir(dirname, G):
     """
         This function recursively processes all the contents of a single
         directory
@@ -281,59 +283,87 @@ def process_dir(dirname):
     nfiles, ntot, nhandled, handled_files = 0, 0, 0, 0
 
     # Get the full path of the directory
-    abs_path = os.path.abspath(dirname)
     logging.debug(f"processing: {dirname}")
 
     # Get a list of all the contents inside `dirname`
+
+    # Get a list of all the contents inside `dirname`
+    abs_path = os.path.abspath(dirname)
     list_of_files = os.listdir(dirname)
-    xs = flatten(
-        lmap(
-            lambda t: lmap(lambda filename: f"{t[0]}/{filename}", t[2]),
-            os.walk(dirname),
-        )
-    )
-    all_files = list(xs)
+    files_to_link = []
     # Iterate through each file one by one
-    for filepath in tqdm(all_files, ncols=80):
-        if os.path.splitext(filepath)[1] in FORTRAN_EXTENSIONS:
-            # Process the contents of the file and get the results
-            (
-                ftot,
-                fhandled,
-                u_keywds,
-                u_lines,
-                h_files,
-                u_modules,
-            ) = process_file(filepath)
+    cluster_name = str(Path(dirname).stem)
+    G.add_subgraph(
+        [], f"cluster_{cluster_name}", label=cluster_name, rankdir="TB",
+    )
+    subgraph = G.get_subgraph(f"cluster_{cluster_name}")
 
-            # Add the result to the total counters
-            ntot += ftot
-            nhandled += fhandled
-            handled_files += h_files
-
-            for keywd in u_keywds:
+    for fname in list_of_files:
+        full_path_to_file = abs_path + "/" + fname
+        # Check if the file is a directory. If it is, recursively call this
+        # function within this directory first
+        if os.path.isdir(full_path_to_file):
+            nf1, nt1, nh1, uk1, ul1, hf, fmap = process_dir(full_path_to_file, subgraph)
+            # Add the result of this directory to the total counters
+            nfiles += nf1
+            ntot += nt1
+            nhandled += nh1
+            handled_files += hf
+            for keywd in uk1:
                 if keywd in unhandled_keywds:
-                    unhandled_keywds[keywd] += u_keywds[keywd]
+                    unhandled_keywds[keywd] += uk1[keywd]
                 else:
-                    unhandled_keywds[keywd] = u_keywds[keywd]
-            unhandled_lines |= u_lines
-            nfiles += 1
-            if ftot == 0:
-                logging.debug(f"Ignoring {filepath} [file is empty]")
-                continue
-            else:
-                pct_handled = fhandled / ftot * 100
+                    unhandled_keywds[keywd] = uk1[keywd]
 
-            file_map[filepath] = {
-                "Total number of lines": ftot,
-                "Number of lines handled": fhandled,
-                "Percentage of file handled": f"{pct_handled:.1f}%",
-                "Imported modules": list(u_modules),
-                "Unhandled keywords": u_keywds,
-                "Unhandled lines": [line[1] for line in list(u_lines)],
-            }
+            unhandled_lines |= ul1
+            file_map.update(fmap)
         else:
-            logging.debug(f"Ignoring {filepath} [unrecognized extension]")
+            # If this is a file, get the file extension and check if it is
+            # supported by this script
+            _, fext = os.path.splitext(fname)
+            if fext in FORTRAN_EXTENSIONS:
+                # Process the contents of the file and get the results
+                ftot, fhandled, u_keywds, u_lines, h_files, u_modules = \
+                    process_file(full_path_to_file)
+                G.add_node(fname)
+                # Add the result to the total counters
+                ntot += ftot
+                nhandled += fhandled
+                handled_files += h_files
+
+                for keywd in u_keywds:
+                    if keywd in unhandled_keywds:
+                        unhandled_keywds[keywd] += u_keywds[keywd]
+                    else:
+                        unhandled_keywds[keywd] = u_keywds[keywd]
+                unhandled_lines |= u_lines
+                if ftot == 0:
+                    logging.debug(f"Ignoring {full_path_to_file} [file is empty]")
+                    continue
+                else:
+                    pct_handled = fhandled / ftot * 100
+
+                file_map[fname] = {
+                    "Total number of lines": ftot,
+                    "Number of lines handled": fhandled,
+                    "Percentage of file handled": f"{pct_handled:.1f}%",
+                    "Imported modules": list(u_modules),
+                    "Unhandled keywords": u_keywds,
+                    "Unhandled lines": [line[1] for line in list(u_lines)],
+                }
+
+                file_path_key = Path(full_path_to_file).relative_to(Path(dirname).parent)
+                file_map[str(file_path_key)] = {
+                    "Total number of lines": ftot,
+                    "Number of lines handled": fhandled,
+                    "Percentage of file handled": f"{pct_handled:.1f}%",
+                    "Imported modules": list(u_modules),
+                    "Unhandled keywords": u_keywds,
+                    "Unhandled lines": [line[1] for line in list(u_lines)],
+                }
+                files_to_link.append(fname)
+        for f1, f2 in pairwise(files_to_link):
+            subgraph.add_edge(f1, f2, color="white")
 
     return (
         nfiles,
@@ -384,7 +414,13 @@ if __name__ == "__main__":
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG)
 
-    results = process_dir(args.directory)
+    file_map = {}
+    G = AGraph(rankdir="TB")
+    G.node_attr["shape"] = "rectangle"
+    G.node_attr["style"] = "rounded"
+    G.node_attr["fontname"] = "Menlo"
+    results = process_dir(Path(args.directory).resolve(), G)
+    G.draw("coverage_map.pdf", prog="dot")
 
     coverage_results_dict = results[-1]
 
