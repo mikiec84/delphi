@@ -1,0 +1,148 @@
+openapi: 3.0.0
+
+info:
+  title: GrFN spec
+  description: Grounded Function Network (GrFN) schema specification
+  contact:
+    name: Clayton T. Morrison
+    email: claytonm@email.arizona.edu
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+  version: 2.0.0
+
+paths: {}
+
+components:
+
+  schemas:
+
+    grfn_def:
+      title: <grfn_def>
+      description: >
+        Top-level structure.
+        A <grfn_def> corresponds to a namespace.
+      required:
+        - date_created
+        - source
+        - vertices
+        - edges
+        - containers
+      properties:
+        date_created:
+          type: string
+          format: date-time
+          description: >
+            Date and time that current GrFN was generated.
+        source:
+          description:
+            Path(s) to source code file(s) that were analyzed.
+          type: array
+          items:
+            $ref: '#/components/schemas/file_path'
+        vertices:
+          type: array
+          items:
+            $ref: '#/components/schemas/vertex'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/edge'
+        containers:
+          type: array
+          items:
+            $ref: '#/components/schemas/container'
+        grounding:
+          type: array
+          items:
+            $ref: '#/components/schemas/link_hypotheses'
+
+    vertex:
+      title: <vertex>
+      description: GrFN vertex
+      oneOf:
+        - $ref: '#/components/schemas/variable_def'
+        - $ref: '#/components/schemas/function_ref'
+
+    edge:
+      title: <edge>
+      description: GrFN edge
+      properties:
+        in:
+          $ref: '#/components/schemas/vertex'
+        in_var:
+          $ref: '#/components/schemas/variable_identifier_name'
+        out:
+          $ref: '#/components/schemas/vertex'
+        out_var:
+          $ref: '#/components/schemas/variable_identifier_name'
+
+    link_hypothesis:
+      title: <link_hypothesis>
+      description: >
+        A commutative binary relation representing a hypothesized
+        link between two <semantic_element>s:
+          (elm1=A, elm2=B) == (elm1=B, elm2=A)
+      required:
+        - element_1
+        - element_2
+        - score
+      properties:
+        element_1:
+          $ref: '#/components/schemas/link_element'
+        element_2:
+          $ref: '#/components/schemas/link_element'
+        score:
+          type: number
+          format: float
+
+    link_element:
+      title: <link_element>
+      description: >
+        A grounding hypothesis link element.<br>
+        "type": identifier (<variable_identifier_name>,
+        <function_identifier_name>, <type_identifier_name>),
+        content_span, text_span, equation_term, or ontology_term
+      required:
+        - type
+        - content
+      properties:
+        type:
+          type: string
+          enum:
+            - identifier
+            - comment_span
+            - text_span
+            - equation_term
+            - ontology_term
+        source:
+          type: string
+        content:
+          type: string
+        content_type:
+          type: string
+          enum:
+            - definition
+            - units
+            - constraint
+
+    variable_def:
+      title: <veriable_def>
+      description: >
+        TODO
+
+    function_ref:
+      title: <function_ref>
+      description: >
+        TODO
+
+    container_def:
+      title: <container_def>
+      description: >
+        TODO
+
+    file_path:
+      title: <file_path>
+      description: >
+        String representation of the path to a file.
+      type: string
