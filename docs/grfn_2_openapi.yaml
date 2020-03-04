@@ -55,7 +55,7 @@ components:
         grounding:
           type: array
           items:
-            $ref: '#/components/schemas/link_hypotheses'
+            $ref: '#/components/schemas/link_hypothesis'
 
     vertex:
       title: <vertex>
@@ -127,7 +127,7 @@ components:
             - constraint
 
     variable_def:
-      title: <veriable_def>
+      title: <variable_def>
       description: >
         TODO
 
@@ -136,8 +136,8 @@ components:
       description: >
         TODO
 
-    container_def:
-      title: <container_def>
+    container:
+      title: <container>
       description: >
         TODO
 
