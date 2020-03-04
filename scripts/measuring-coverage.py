@@ -31,7 +31,8 @@ from delphi.utils.fp import flatten, pairwise
 from delphi.translators.for2py import preprocessor
 from delphi.translators.for2py.syntax import *
 from pygraphviz import AGraph
-
+import matplotlib
+from matplotlib import cm
 
 # Check Python version - the script needs Python 3.6 or 3.7.
 
@@ -325,7 +326,6 @@ def process_dir(dirname, G):
                 # Process the contents of the file and get the results
                 ftot, fhandled, u_keywds, u_lines, h_files, u_modules = \
                     process_file(full_path_to_file)
-                G.add_node(fname)
                 # Add the result to the total counters
                 ntot += ftot
                 nhandled += fhandled
@@ -343,6 +343,11 @@ def process_dir(dirname, G):
                 else:
                     pct_handled = fhandled / ftot * 100
 
+                color = (
+                    matplotlib.colors.rgb2hex(cm.Greens(pct_handled/100.0))
+                )
+
+                G.add_node(fname, style="filled", fontcolor="white", fillcolor = color)
                 file_map[fname] = {
                     "Total number of lines": ftot,
                     "Number of lines handled": fhandled,
@@ -424,5 +429,5 @@ if __name__ == "__main__":
 
     coverage_results_dict = results[-1]
 
-    with open("coverage_file_map.json", "w") as fp:
-        json.dump(coverage_results_dict, fp, indent=4)
+    # with open("coverage_file_map.json", "w") as fp:
+        # json.dump(coverage_results_dict, fp, indent=4)
