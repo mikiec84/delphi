@@ -212,14 +212,6 @@ components:
         '"foo.bar.baz"'
       type: string
 
-    gensym:
-      title: <gensym>
-      description: >
-        String representation of a unique gensym.
-        Used as identifiers in lambdas and other source code
-        generated from GrFN.
-      type: string
-
     variable_identifier_name:
       title: <variable_identifier_name>
       description: >
@@ -229,7 +221,8 @@ components:
     variable_base_name:
       title: <variable_base_name>
       description: >
-        `"@variable::<base_name>::<index>"`
+        `"<base_name>::<index>"`<br>
+        <index> may be an integer or a uuid
       type: string
 
     container_identifier_name:
@@ -241,7 +234,7 @@ components:
     container_base_name:
       title: <container_base_name>
       description: >
-        `"@container::<container_type>[$[<var_affected>|<code_given_name>]]"`
+        `"<container_type>[$[<var_affected>|<code_given_name>]]"`
       type: string
 
     type_identifier_name:
@@ -249,13 +242,13 @@ components:
       description: >
         String denoting a non-primitive type; will have a corresponding unique
         `<type_spec>`:<br>
-        `"@type::<namespace_path_string>::<scope_path_string>::<base_name>"`
+        `"@type::<namespace_path_string>::<scope_path_string>::<type_base_name>"`
       type: string
 
     type_base_name:
       title: <type_base_name>
       description: >
-        `"@type::<base_name>"`
+        `"<base_name>"`
       type: string
 
     literal_name:
@@ -310,7 +303,6 @@ components:
         - name
         - index
         - source_ref
-        - gensym
         - domain
       properties:
         name:
@@ -319,8 +311,6 @@ components:
           type: integer
         source_ref:
           $ref: '#/components/schemas/source_code_ref'
-        gensym:
-          $ref: '#/components/schemas/gensym'
 
         domain:
            $ref: '#/components/schemas/type'
