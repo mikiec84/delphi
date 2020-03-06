@@ -169,12 +169,12 @@ def test_linking_graph():
 
 
 def test_GrFN_Json_dumping(petpt_grfn):
-    PETPT_json = petpt_grfn.to_json()
-    PETPT_dict = json.loads(PETPT_json)
-    assert "nodes" in PETPT_dict
+    PETPT_dict = petpt_grfn.to_json()
+    assert "variables" in PETPT_dict
+    assert "functions" in PETPT_dict
     assert "edges" in PETPT_dict
     assert "containers" in PETPT_dict
-    assert len(PETPT_dict["nodes"]) == 35
+    assert len(PETPT_dict["containers"]) == 1
 
     filepath = "tests/data/program_analysis/GrFN_JSON_TEST.json"
     petpt_grfn.to_json_file(filepath)

@@ -97,7 +97,7 @@ class GrFNGenerator(object):
     def __init__(self, annotated_assigned=[], function_definitions=[]):
         self.annotated_assigned = annotated_assigned
         self.function_definitions = function_definitions
-        self.use_numpy = True
+        self.use_numpy = False
         self.fortran_file = None
         self.exclude_list = []
         self.loop_input = []
@@ -2132,9 +2132,14 @@ class GrFNGenerator(object):
                                 )
                         else:
                             function = self._generate_array_setter(
-                                node, function, arg,
-                                function_name, container_id_name,
-                                arr_index, state)
+                                node,
+                                function,
+                                arg,
+                                function_name,
+                                container_id_name,
+                                arr_index,
+                                state,
+                            )
                     # This is a case where a literal gets assigned to an array.
                     # For example, arr(i) = 100.
                     elif "type" in arg[0] and array_set:
